@@ -1,6 +1,6 @@
 {
   "name": "@karinjs/plugin-ffmpeg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "ikenxuan",
   "type": "module",
   "description": "Provide Karin with an out of the box plugin for ffmpeg binary files",
