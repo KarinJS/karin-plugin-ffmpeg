@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.0.1...v0.1.0) (2025-10-31)
+
+
+### ✨ 新功能
+
+* hello world ([9d2445d](https://github.com/KarinJS/karin-plugin-ffmpeg/commit/9d2445df6ab3939b046ee568302d3925f308166f))
+
 ## [0.1.1](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.0...v0.1.1) (2025-10-31)
 
 
