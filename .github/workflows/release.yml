@@ -197,7 +197,10 @@ jobs:
           echo "✅ 已应用手动版本号：${{ inputs.manual_version }}"
 
       - name: 📦 准备发布产物 (正式版)
-        if: needs.version-release.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
+        if: |
+          needs.version-release.outputs.release_created == 'true' || 
+          needs.version-release.outputs.releases_created == 'true' ||
+          (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
         run: |
           pnpm pkg delete devDependencies
           mkdir -p ${{ runner.temp }}/production/
@@ -217,7 +220,10 @@ jobs:
           cp -r package.json README.md CHANGELOG.md LICENSE lib ${{ runner.temp }}/preview/
 
       - name: 📤 上传正式版构建产物
-        if: needs.version-release.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
+        if: |
+          needs.version-release.outputs.release_created == 'true' || 
+          needs.version-release.outputs.releases_created == 'true' ||
+          (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
         uses: actions/upload-artifact@v4
         with:
           name: production-build
@@ -248,6 +254,7 @@ jobs:
     if: |
       needs.unified-build.outputs.build_success == 'true' && (
         needs.version-release.outputs.release_created == 'true' ||
+        needs.version-release.outputs.releases_created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
       )
     steps:
