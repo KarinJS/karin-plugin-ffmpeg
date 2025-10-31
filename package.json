@@ -1,0 +1,68 @@
+{
+  "name": "@karinjs/plugin-ffmpeg",
+  "version": "0.0.1",
+  "author": "ikenxuan",
+  "type": "module",
+  "description": "Provide Karin with an out of the box plugin for ffmpeg binary files",
+  "homepage": "https://github.com/KarinJS/karin-plugin-ffmpeg",
+  "bugs": {
+    "url": "https://github.com/KarinJS/karin-plugin-ffmpeg/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KarinJS/karin-plugin-ffmpeg.git"
+  },
+  "keywords": [
+    "karin",
+    "ffmpeg",
+    "video",
+    "audio",
+    "media",
+    "converter"
+  ],
+  "scripts": {
+    "app": "node lib/app.js",
+    "build": "tsdown",
+    "dev": "tsx src/index.ts",
+    "test": "tsx test.ts",
+    "pub": "npm publish --access public",
+    "postinstall": "node lib/postinstall.js || exit 0"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "tar": "^7.4.3",
+    "unzipper": "^0.12.3",
+    "chalk": "^5.3.0",
+    "cli-progress": "^3.12.0"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.11.6",
+    "@types/express": "^5.0.1",
+    "@types/lodash": "^4.17.16",
+    "@types/node": "24.9.2",
+    "@types/tar": "^6.1.13",
+    "@types/unzipper": "^0.10.10",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.7.0",
+    "neostandard": "^0.11.9",
+    "node-karin": "*",
+    "tsdown": "^0.15.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.3"
+  },
+  "karin": {
+    "main": "src/index.ts"
+  },
+  "files": [
+    "/lib/**/*.js",
+    "/lib/**/*.d.ts",
+    "LICENSE",
+    "package.json",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}
