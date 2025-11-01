@@ -155,6 +155,9 @@ FFMPEG_PROXY_INDEX=2 node lib/postinstall.js
 - `11` - tbedu 镜像
 - `12` - ghproxy 镜像
 
+
+逻辑参考自 [NapCat-Installer](https://github.com/NapNeko/NapCat-Installer/blob/main/script/install.sh)
+
 ### 支持哪些平台？
 
 - Windows (x64, x86)
