@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.2...v0.1.3) (2026-03-15)
+
+
+### 🐛 错误修复
+
+* ci ([7272392](https://github.com/KarinJS/karin-plugin-ffmpeg/commit/727239274f13c1fd36b12c37bc5105b9556a1d1c))
+
 ## [0.1.2](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.1...v0.1.2) (2026-03-15)
 
 
