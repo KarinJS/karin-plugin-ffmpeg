@@ -1,3 +1,5 @@
+export type { ConfigType } from './Config'
+
 /**
  * 存储FFmpeg相关二进制文件路径的接口
  */

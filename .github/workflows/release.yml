@@ -204,20 +204,20 @@ jobs:
         run: |
           pnpm pkg delete devDependencies
           mkdir -p ${{ runner.temp }}/production/
-          cp -r package.json README.md CHANGELOG.md LICENSE lib ${{ runner.temp }}/production/
+          cp -r package.json README.md LICENSE dist ${{ runner.temp }}/production/
 
       - name: 📦 准备构建分支产物
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           pnpm pkg delete devDependencies
           mkdir -p ${{ runner.temp }}/build-branch/
-          cp -r package.json CHANGELOG.md README.md LICENSE lib ${{ runner.temp }}/build-branch/
+          cp -r package.json README.md LICENSE dist ${{ runner.temp }}/build-branch/
 
       - name: 📦 准备预览包产物
         if: github.event_name != 'workflow_dispatch' || inputs.run_mode != 'production'
         run: |
           mkdir -p ${{ runner.temp }}/preview/
-          cp -r package.json README.md CHANGELOG.md LICENSE lib ${{ runner.temp }}/preview/
+          cp -r package.json README.md LICENSE dist ${{ runner.temp }}/preview/
 
       - name: 📤 上传正式版构建产物
         if: |
@@ -257,6 +257,9 @@ jobs:
         needs.version-release.outputs.releases_created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
       )
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: 📥 下载构建产物
         uses: actions/download-artifact@v4
@@ -264,14 +267,24 @@ jobs:
           name: production-build
           path: ./
 
+      - name: 🟢 配置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: ⏫ 升级 npm 版本
+        run: npm install -g npm@latest
+
+      - name: 🧹 清理开发依赖
+        run: pnpm pkg delete devDependencies
+
       - name: 🚀 发布到 NPM 官方源
         id: publish-to-npm
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          registry: https://registry.npmjs.org/
-          access: public
-          provenance: true
+        run: |
+          npm publish --provenance --access public
+          echo "name=$(npm pkg get name | tr -d '\"')" >> $GITHUB_OUTPUT
+          echo "version=$(npm pkg get version | tr -d '\"')" >> $GITHUB_OUTPUT
 
       - name: 📊 生成发布报告
         run: |
