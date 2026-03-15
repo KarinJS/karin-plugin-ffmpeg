@@ -202,14 +202,14 @@ jobs:
           needs.version-release.outputs.releases_created == 'true' ||
           (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'production')
         run: |
-          pnpm pkg delete devDependencies
+          npm pkg delete devDependencies
           mkdir -p ${{ runner.temp }}/production/
           cp -r package.json README.md LICENSE dist ${{ runner.temp }}/production/
 
       - name: 📦 准备构建分支产物
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          pnpm pkg delete devDependencies
+          npm pkg delete devDependencies
           mkdir -p ${{ runner.temp }}/build-branch/
           cp -r package.json README.md LICENSE dist ${{ runner.temp }}/build-branch/
 
@@ -277,7 +277,7 @@ jobs:
         run: npm install -g npm@latest
 
       - name: 🧹 清理开发依赖
-        run: pnpm pkg delete devDependencies
+        run: npm pkg delete devDependencies
 
       - name: 🚀 发布到 NPM 官方源
         id: publish-to-npm
@@ -483,7 +483,7 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: 🧹 清理开发依赖
-        run: pnpm pkg delete devDependencies
+        run: npm pkg delete devDependencies
 
       - name: 🚀 发布预览包
         id: publish_pkg
