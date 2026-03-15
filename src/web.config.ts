@@ -17,6 +17,11 @@ export default defineConfig({
     version: Root.version,
     author: [
       {
+        name: 'KarinJS',
+        home: 'https://github.com/KarinJS',
+        avatar: 'https://github.com/KarinJS.png'
+      },
+      {
         name: 'ikenxuan',
         home: 'https://github.com/ikenxuan',
         avatar: 'https://github.com/ikenxuan.png'
@@ -27,22 +32,25 @@ export default defineConfig({
     const Config = cfg.get()
     return [
       components.radio.group('ffmpegVersion', {
-        label: '定义 FFmpeg 版本',
+        label: 'FFmpeg 版本选择',
         orientation: 'vertical',
-        description: '选择下载并提供的 FFmpeg 版本，默认使用 8.0',
+        description: '选择要下载使用的 FFmpeg 版本，切换版本后将自动下载对应版本并清理旧版本文件',
         defaultValue: Config.ffmpegVersion,
         radio: [
           components.radio.create('ffmpegVersion:radio-1', {
             label: 'FFmpeg 8.0',
-            value: '8.0'
+            value: '8.0',
+            description: '最新稳定版本，推荐使用，支持最新的编解码器和功能'
           }),
           components.radio.create('ffmpegVersion:radio-2', {
             label: 'FFmpeg 7.1',
-            value: '7.1'
+            value: '7.1',
+            description: '上一代稳定版本，兼容性良好，适合对稳定性要求较高的场景'
           }),
           components.radio.create('ffmpegVersion:radio-3', {
             label: 'FFmpeg 6.1',
-            value: '6.1'
+            value: '6.1',
+            description: '长期支持版本，适合需要长期维护和兼容旧系统的场景'
           }),
         ]
       }),
