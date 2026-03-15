@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.1...v0.1.2) (2026-03-15)
+
+
+### ♻️ 代码重构
+
+* 重构 ([0e09373](https://github.com/KarinJS/karin-plugin-ffmpeg/commit/0e09373a61c4584b799707ddc975e94098036ba8))
+
 ## [0.1.1](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.0...v0.1.1) (2025-10-31)
 
 
