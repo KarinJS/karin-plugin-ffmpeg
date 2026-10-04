@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.3...v0.2.0) (2026-10-04)
+
+
+### ✨ 新功能
+
+* FFmpeg 版本列表自动化并迁移至 oxc 套件 ([d116927](https://github.com/KarinJS/karin-plugin-ffmpeg/commit/d11692758f48f2d00fbfa621379c07d294a26d68))
+
+
+### 🐛 错误修复
+
+* ci 升级 pnpm 至 11.18.0 以兼容 pnpm-workspace.yaml 设置 ([36d0c52](https://github.com/KarinJS/karin-plugin-ffmpeg/commit/36d0c5252c1a34b735ca23c71d99c406ee1864f0))
+
 ## [0.1.3](https://github.com/KarinJS/karin-plugin-ffmpeg/compare/v0.1.2...v0.1.3) (2026-03-15)
 
 
