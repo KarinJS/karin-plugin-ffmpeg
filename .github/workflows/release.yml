@@ -151,7 +151,7 @@ jobs:
       - name: 📦 配置 PNPM 环境
         uses: pnpm/action-setup@v4
         with:
-          version: 9.15.9
+          version: 11.18.0
 
       - name: 🟢 配置 Node.js 环境
         uses: actions/setup-node@v4
@@ -324,7 +324,7 @@ jobs:
       - name: 📦 配置 PNPM 环境
         uses: pnpm/action-setup@v4
         with:
-          version: 9.15.9
+          version: 11.18.0
 
       - name: 🟢 配置 Node.js 环境
         uses: actions/setup-node@v4
