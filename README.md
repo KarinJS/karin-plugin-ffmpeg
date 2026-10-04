@@ -25,18 +25,38 @@ pnpm dev
 pnpm build
 # 测试
 pnpm test
+
+# 代码检查
+pnpm lint
+
+# 格式化
+pnpm fmt
 ```
 
 ### 使用方式
 
 ```ts
-import ffmpeg from '@karinjs/plugin-ffmpeg'
+import ffmpeg, { getAvailableVersions, resolveVersion } from '@karinjs/plugin-ffmpeg'
 
 const paths = await ffmpeg.ready()
 console.log(paths.ffmpegPath)
 
 const syncPaths = ffmpeg.readySync()
 console.log(syncPaths.ffmpegPath)
+```
+
+### FFmpeg 版本
+
+Web 面板中的版本列表来自镜像源，随上游发布自动增长，无需手动维护。
+每条版本线（如 `8.1`）在保存后会自动解析并下载其在镜像上的最新构建（如 `8.1.3`）。
+
+也可以在代码中使用：
+
+```ts
+// 获取可用版本线（新版本在前）
+const lines = await getAvailableVersions()
+// 将版本线解析为镜像上的最新构建版本号
+const version = await resolveVersion('8.1')
 ```
 
 ### 项目结构
@@ -73,7 +93,7 @@ dist/               # 编译输出目录
 
 - Windows (x64, x86)
 - Linux (x64, arm64, i686)
-- macOS (暂不支持，构建产物不包含 darwin 目标) 
+- macOS (暂不支持，构建产物不包含 darwin 目标)
 
 ### 存储位置
 

@@ -17,7 +17,7 @@ export default defineConfig({
   deps: {
     neverBundle: [
       ...builtinModules,
-      ...builtinModules.map((mod) => `node:${mod}`),
+      ...builtinModules.map(mod => `node:${mod}`),
       ...[/^node-karin/],
     ],
   },

@@ -23,20 +23,24 @@
   "scripts": {
     "build": "tsdown",
     "dev": "cross-env EBV_FILE=\"development.env\" tsx src/app.ts",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "test": "vitest run",
     "pub": "npm publish --access public"
   },
   "main": "dist/index.mjs",
   "devDependencies": {
-    "@types/node": "25.5.0",
+    "@types/node": "24.10.15",
     "cross-env": "^10.1.0",
-    "eslint": "^10.0.3",
-    "neostandard": "^0.13.0",
-    "node-karin": "1.14.4",
-    "tsdown": "^0.21.2",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "node-karin": "1.17.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   },
   "karin": {
     "files": [

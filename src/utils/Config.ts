@@ -4,7 +4,6 @@ import { watch, filesByExt, requireFileSync, logger } from 'node-karin'
 import type { ConfigType } from '@/types'
 import { Root } from '@/root'
 
-
 /**
  * 配置管理类
  */
@@ -17,10 +16,10 @@ class Config {
   private configPath: string = path.join(this.dir, 'config.json')
   /** 默认配置 */
   private readonly defaultConfig: ConfigType = {
-    ffmpegVersion: '8.0'
+    ffmpegVersion: '8.1',
   }
 
-  constructor () {
+  constructor() {
     this.init()
     this.watchConfig()
   }
@@ -28,27 +27,24 @@ class Config {
   /**
    * 初始化配置文件
    */
-  private init (): void {
+  private init(): void {
     if (!fs.existsSync(this.dir)) {
       fs.mkdirSync(this.dir, { recursive: true })
     }
 
     // 如果配置文件不存在，创建默认配置
     if (!fs.existsSync(this.configPath)) {
-      fs.writeFileSync(
-        this.configPath,
-        JSON.stringify(this.defaultConfig, null, 2)
-      )
+      fs.writeFileSync(this.configPath, JSON.stringify(this.defaultConfig, null, 2))
     }
   }
 
   /**
    * 监听配置文件变化
    */
-  private watchConfig (): void {
+  private watchConfig(): void {
     setTimeout(() => {
       const list = filesByExt(this.dir, '.json', 'abs')
-      list.forEach((file) => {
+      list.forEach(file => {
         watch(file, () => {
           // 配置文件变化时清空缓存
           this.cache = undefined
@@ -61,7 +57,7 @@ class Config {
    * 获取配置
    * @returns 配置对象
    */
-  get (): ConfigType {
+  get(): ConfigType {
     // 如果缓存存在，直接返回缓存
     if (this.cache) {
       return this.cache
@@ -88,7 +84,7 @@ class Config {
    * 写入配置
    * @param config 配置对象
    */
-  write (config: Partial<ConfigType>): void {
+  write(config: Partial<ConfigType>): void {
     try {
       const result: ConfigType = { ...this.defaultConfig, ...config }
       this.cache = result
@@ -103,7 +99,7 @@ class Config {
    * 更新配置（合并现有配置）
    * @param config 要更新的配置项
    */
-  update (config: Partial<ConfigType>): void {
+  update(config: Partial<ConfigType>): void {
     const current = this.get()
     this.write({ ...current, ...config })
   }
@@ -111,7 +107,7 @@ class Config {
   /**
    * 重置为默认配置
    */
-  reset (): void {
+  reset(): void {
     this.write(this.defaultConfig)
   }
 }

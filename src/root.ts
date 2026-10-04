@@ -21,26 +21,26 @@ export const Root = {
   /** 插件绝对路径 */
   dir: filePath,
   /** 插件 package.json */
-  get pkg () {
+  get pkg() {
     if (!cachedPkg) {
       cachedPkg = readPackageJson()
     }
     return cachedPkg
   },
   /** 插件名 */
-  get name () {
+  get name() {
     return this.pkg.name.replace(/\//g, '-')
   },
   /** 插件版本 */
-  get version () {
+  get version() {
     return this.pkg.version
   },
   /** 插件在 @karinjs 中的目录 */
-  get BaseDir () {
+  get BaseDir() {
     return path.join(karinPathBase, this.name)
   },
   /** 配置文件路径 */
-  get ConfigDir () {
+  get ConfigDir() {
     return path.join(this.BaseDir, 'config')
-  }
+  },
 }

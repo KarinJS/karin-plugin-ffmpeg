@@ -69,7 +69,7 @@ const cacheRoot = path.join(os.homedir(), '.cache', 'ffmpeg')
 let cachedPaths: FFPaths = {
   ffmpegPath: null,
   ffprobePath: null,
-  ffplayPath: null
+  ffplayPath: null,
 }
 
 /**
@@ -105,7 +105,7 @@ const findCachedPathsSync = (platformKey: string): FFPaths => {
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
     .map(name => ({ name, version: parseVersionFromDir(name, platformKey) }))
-    .filter(item => item.version !== null) as Array<{ name: string, version: string }>
+    .filter(item => item.version !== null) as Array<{ name: string; version: string }>
 
   if (candidates.length === 0) {
     return { ffmpegPath: null, ffprobePath: null, ffplayPath: null }
@@ -115,8 +115,13 @@ const findCachedPathsSync = (platformKey: string): FFPaths => {
 
   for (const candidate of candidates) {
     const versionDir = path.join(cacheRoot, candidate.name)
-    const extractedDir = fs.readdirSync(versionDir, { withFileTypes: true })
-      .find(entry => entry.isDirectory() && entry.name.startsWith(`ffmpeg-${candidate.version}-${platformKey}-`))
+    const extractedDir = fs
+      .readdirSync(versionDir, { withFileTypes: true })
+      .find(
+        entry =>
+          entry.isDirectory() &&
+          entry.name.startsWith(`ffmpeg-${candidate.version}-${platformKey}-`),
+      )
     if (!extractedDir) continue
     const binDir = path.join(versionDir, extractedDir.name, 'bin')
     const ffmpegPath = path.join(binDir, `ffmpeg${extension}`)
@@ -126,7 +131,7 @@ const findCachedPathsSync = (platformKey: string): FFPaths => {
       return {
         ffmpegPath,
         ffprobePath,
-        ffplayPath: fs.existsSync(ffplayPath) ? ffplayPath : null
+        ffplayPath: fs.existsSync(ffplayPath) ? ffplayPath : null,
       }
     }
   }
@@ -139,7 +144,7 @@ const findCachedPathsSync = (platformKey: string): FFPaths => {
  * @param url 请求地址
  * @returns JSON 数据
  */
-const fetchJson = async <T> (url: string): Promise<T> => {
+const fetchJson = async <T>(url: string): Promise<T> => {
   const response = await axios.get<T>(url, { responseType: 'json' })
   return response.data
 }
@@ -165,6 +170,31 @@ const compareVersions = (a: string, b: string): number => {
 }
 
 /**
+ * 版本线信息
+ * @property version 版本线（如 8.1）
+ * @property latest 该版本线在镜像上的最新构建版本号（如 8.1.3）
+ */
+export type ReleaseLine = {
+  version: string
+  latest: string
+}
+
+/**
+ * 镜像版本列表缓存
+ */
+let versionsCache: { versions: string[]; fetchedAt: number } | null = null
+
+/**
+ * 版本列表缓存有效期（毫秒）
+ */
+const versionsCacheTTL = 10 * 60 * 1000
+
+/**
+ * 镜像不可用时的回退版本线
+ */
+const fallbackVersionLines = ['8.1', '8.0', '7.1', '6.1']
+
+/**
  * 读取可用版本
  * @returns 版本号列表
  */
@@ -176,15 +206,84 @@ const fetchAvailableVersions = async (): Promise<string[]> => {
 }
 
 /**
+ * 获取镜像版本列表（带内存缓存）
+ * @returns 版本号列表（新版本在前）
+ */
+const fetchVersionList = async (): Promise<string[]> => {
+  if (versionsCache && Date.now() - versionsCache.fetchedAt < versionsCacheTTL) {
+    return versionsCache.versions
+  }
+
+  const versions = (await fetchAvailableVersions()).sort(compareVersions).reverse()
+  versionsCache = { versions, fetchedAt: Date.now() }
+  return versions
+}
+
+/**
  * 获取版本候选列表
  * @returns 版本候选列表
  */
 const resolveVersionCandidates = async (): Promise<string[]> => {
-  const versions = await fetchAvailableVersions()
+  const versions = await fetchVersionList()
   if (versions.length === 0) {
     throw new Error('未找到可用版本')
   }
-  return versions.sort(compareVersions).reverse()
+  return versions
+}
+
+/**
+ * 将版本号按版本线分组，取每条线的最新构建
+ * @param versions 版本号列表（新版本在前）
+ * @returns 版本线列表（新版本在前）
+ */
+const groupVersionLines = (versions: string[]): ReleaseLine[] => {
+  const lines = new Map<string, string>()
+  for (const version of versions) {
+    const parts = version.split('.')
+    const line = parts.length > 1 ? `${parts[0]}.${parts[1]}` : version
+    const current = lines.get(line)
+    if (!current || compareVersions(version, current) > 0) {
+      lines.set(line, version)
+    }
+  }
+
+  return [...lines.entries()]
+    .map(([version, latest]) => ({ version, latest }))
+    .sort((a, b) => compareVersions(b.version, a.version))
+}
+
+/**
+ * 获取可用版本线列表（新版本在前）
+ *
+ * 每条版本线（如 8.1）对应镜像上的最新一次构建（如 8.1.3），
+ * 列表随镜像上发布的新版本自动增长。结果带内存缓存，
+ * 镜像不可用时回退到内置列表。
+ * @returns 版本线列表
+ */
+export const getAvailableVersions = async (): Promise<ReleaseLine[]> => {
+  try {
+    const versions = await fetchVersionList()
+    if (versions.length > 0) {
+      return groupVersionLines(versions)
+    }
+  } catch (error) {
+    logger.warn(`获取 FFmpeg 版本列表失败，使用回退版本线: ${error}`)
+  }
+  return fallbackVersionLines.map(version => ({ version, latest: version }))
+}
+
+/**
+ * 解析版本线在镜像上的最新构建版本号
+ *
+ * 传入具体版本号或镜像上不存在该版本线时，原样返回；
+ * 镜像不可用时回退为传入值本身（镜像的滚动目录 v{version} 依然可用）。
+ * @param version 版本线（如 8.1）或具体版本号（如 8.1.3）
+ * @returns 具体版本号
+ */
+export const resolveVersion = async (version: string): Promise<string> => {
+  const lines = await getAvailableVersions()
+  const match = lines.find(item => item.version === version)
+  return match ? match.latest : version
 }
 
 /**
@@ -216,7 +315,12 @@ const resolvePlatformKey = (): string | null => {
  * @returns 二进制路径
  */
 const findCachedPaths = async (platformKey: string): Promise<FFPaths> => {
-  if (!await fs.promises.stat(cacheRoot).then(() => true).catch(() => false)) {
+  if (
+    !(await fs.promises
+      .stat(cacheRoot)
+      .then(() => true)
+      .catch(() => false))
+  ) {
     return { ffmpegPath: null, ffprobePath: null, ffplayPath: null }
   }
 
@@ -226,7 +330,7 @@ const findCachedPaths = async (platformKey: string): Promise<FFPaths> => {
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
     .map(name => ({ name, version: parseVersionFromDir(name, platformKey) }))
-    .filter(item => item.version !== null) as Array<{ name: string, version: string }>
+    .filter(item => item.version !== null) as Array<{ name: string; version: string }>
 
   if (candidates.length === 0) {
     return { ffmpegPath: null, ffprobePath: null, ffplayPath: null }
@@ -236,18 +340,20 @@ const findCachedPaths = async (platformKey: string): Promise<FFPaths> => {
 
   for (const candidate of candidates) {
     const versionDir = path.join(cacheRoot, candidate.name)
-    const extractedDir = (await fs.promises.readdir(versionDir, { withFileTypes: true }))
-      .find(entry => entry.isDirectory() && entry.name.startsWith(`ffmpeg-${candidate.version}-${platformKey}-`))
+    const extractedDir = (await fs.promises.readdir(versionDir, { withFileTypes: true })).find(
+      entry =>
+        entry.isDirectory() && entry.name.startsWith(`ffmpeg-${candidate.version}-${platformKey}-`),
+    )
     if (!extractedDir) continue
     const binDir = path.join(versionDir, extractedDir.name, 'bin')
     const ffmpegPath = path.join(binDir, `ffmpeg${extension}`)
     const ffprobePath = path.join(binDir, `ffprobe${extension}`)
     const ffplayPath = path.join(binDir, `ffplay${extension}`)
-    if (await fileExists(ffmpegPath) && await fileExists(ffprobePath)) {
+    if ((await fileExists(ffmpegPath)) && (await fileExists(ffprobePath))) {
       return {
         ffmpegPath,
         ffprobePath,
-        ffplayPath: await fileExists(ffplayPath) ? ffplayPath : null
+        ffplayPath: (await fileExists(ffplayPath)) ? ffplayPath : null,
       }
     }
   }
@@ -267,16 +373,17 @@ if (platformKeyForSync) {
  * @param platformKey 平台标识
  * @returns 选中的条目
  */
-const selectArchiveEntry = (entries: MirrorEntry[], version: string, platformKey: string): MirrorEntry | null => {
+const selectArchiveEntry = (
+  entries: MirrorEntry[],
+  version: string,
+  platformKey: string,
+): MirrorEntry | null => {
   const prefix = `ffmpeg-${version}-${platformKey}-`
-  const candidates = entries.filter(item => item.type === 'file' && item.name.startsWith(prefix) && item.name.endsWith('.tar.xz'))
+  const candidates = entries.filter(
+    item => item.type === 'file' && item.name.startsWith(prefix) && item.name.endsWith('.tar.xz'),
+  )
 
-  const prioritySuffixes = [
-    'gpl.tar.xz',
-    'lgpl.tar.xz',
-    'gpl-shared.tar.xz',
-    'lgpl-shared.tar.xz'
-  ]
+  const prioritySuffixes = ['gpl.tar.xz', 'lgpl.tar.xz', 'gpl-shared.tar.xz', 'lgpl-shared.tar.xz']
 
   for (const suffix of prioritySuffixes) {
     const match = candidates.find(item => item.name.endsWith(suffix))
@@ -330,8 +437,15 @@ const findFiles = async (dir: string, pattern: RegExp): Promise<string[]> => {
  * @param extension 扩展名
  * @returns 二进制路径
  */
-const normalizeBinaryPath = async (targetDir: string, binaryName: string, extension: string): Promise<string | null> => {
-  const candidates = await findFiles(targetDir, new RegExp(`[/\\\\]bin[/\\\\]${binaryName}${extension}$`, 'i'))
+const normalizeBinaryPath = async (
+  targetDir: string,
+  binaryName: string,
+  extension: string,
+): Promise<string | null> => {
+  const candidates = await findFiles(
+    targetDir,
+    new RegExp(`[/\\\\]bin[/\\\\]${binaryName}${extension}$`, 'i'),
+  )
 
   if (candidates.length === 0) {
     return null
@@ -350,7 +464,7 @@ const cleanupRootBinaries = async (targetDir: string, extension: string): Promis
   for (const binary of binaries) {
     const filePath = path.join(targetDir, `${binary}${extension}`)
     if (await fileExists(filePath)) {
-      await fs.promises.unlink(filePath).catch(() => { })
+      await fs.promises.unlink(filePath).catch(() => {})
     }
   }
 }
@@ -364,7 +478,7 @@ const ensureExecutable = async (filePath: string | null): Promise<void> => {
   if (process.platform === 'win32') return
   try {
     await fs.promises.chmod(filePath, 0o755)
-  } catch { }
+  } catch {}
 }
 
 const formatBytes = (value: number): string => {
@@ -387,7 +501,12 @@ const formatDuration = (seconds: number): string => {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
-const renderProgressLine = (label: string, received: number, total: number, startTime: number): void => {
+const renderProgressLine = (
+  label: string,
+  received: number,
+  total: number,
+  startTime: number,
+): void => {
   if (!process.stdout.isTTY) return
   const elapsed = Math.max((Date.now() - startTime) / 1000, 0.1)
   const speed = received / elapsed
@@ -399,9 +518,13 @@ const renderProgressLine = (label: string, received: number, total: number, star
     const percent = Math.round(ratio * 100)
     const remaining = Math.max(total - received, 0)
     const eta = speed > 0 ? formatDuration(remaining / speed) : '00:00'
-    process.stdout.write(`\r下载中 FFmpeg ${label} ${percent}% ${bar} ${formatBytes(received)}/${formatBytes(total)} ${formatBytes(speed)}/s ETA ${eta}`)
+    process.stdout.write(
+      `\r下载中 FFmpeg ${label} ${percent}% ${bar} ${formatBytes(received)}/${formatBytes(total)} ${formatBytes(speed)}/s ETA ${eta}`,
+    )
   } else {
-    process.stdout.write(`\r下载中 FFmpeg ${label} ${formatBytes(received)} ${formatBytes(speed)}/s`)
+    process.stdout.write(
+      `\r下载中 FFmpeg ${label} ${formatBytes(received)} ${formatBytes(speed)}/s`,
+    )
   }
 }
 
@@ -429,7 +552,7 @@ const downloadArchive = async (url: string, archivePath: string, label: string):
   try {
     await pipeline(response.data, fileStream)
   } catch (error) {
-    await fs.promises.unlink(tempPath).catch(() => { })
+    await fs.promises.unlink(tempPath).catch(() => {})
     if (process.stdout.isTTY) process.stdout.write('\n')
     throw error
   }
@@ -448,7 +571,7 @@ const verifyArchiveHeader = async (archivePath: string): Promise<boolean> => {
   const headerBuffer = Buffer.alloc(6)
   await fileHandle.read(headerBuffer, 0, 6, 0)
   await fileHandle.close()
-  const magicHeader = Buffer.from([0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00])
+  const magicHeader = Buffer.from([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00])
   return headerBuffer.equals(magicHeader)
 }
 
@@ -467,16 +590,13 @@ const downloadAndExtract = async (version: string, platformKey: string): Promise
   const ffprobeTarget = path.join(versionDir, `ffprobe${extension}`)
   const ffplayTarget = path.join(versionDir, `ffplay${extension}`)
 
-  const exists = await Promise.all([
-    fileExists(ffmpegTarget),
-    fileExists(ffprobeTarget)
-  ])
+  const exists = await Promise.all([fileExists(ffmpegTarget), fileExists(ffprobeTarget)])
 
   if (exists.every(Boolean)) {
     return {
       ffmpegPath: ffmpegTarget,
       ffprobePath: ffprobeTarget,
-      ffplayPath: await fileExists(ffplayTarget) ? ffplayTarget : null
+      ffplayPath: (await fileExists(ffplayTarget)) ? ffplayTarget : null,
     }
   }
 
@@ -503,17 +623,17 @@ const downloadAndExtract = async (version: string, platformKey: string): Promise
     }
     const isValid = await verifyArchiveHeader(archivePath)
     if (!isValid) {
-      await fs.promises.unlink(archivePath).catch(() => { })
+      await fs.promises.unlink(archivePath).catch(() => {})
       continue
     }
 
     try {
       await extractArchive(archivePath, versionDir)
-      await fs.promises.unlink(archivePath).catch(() => { })
+      await fs.promises.unlink(archivePath).catch(() => {})
       logger.info(`解压完成: ${versionDir}`)
       break
     } catch (error) {
-      await fs.promises.unlink(archivePath).catch(() => { })
+      await fs.promises.unlink(archivePath).catch(() => {})
       if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOSPC') {
         throw error
       }
@@ -550,7 +670,18 @@ const resolvePathsAsync = async (): Promise<FFPaths> => {
     return cached
   }
 
-  const versions = await resolveVersionCandidates()
+  // 优先尝试配置指定的版本线，失败后按新到旧遍历镜像上的所有版本
+  const versions: string[] = []
+  const preferred = await resolveVersion(cfg.get().ffmpegVersion).catch(() => null)
+  if (preferred) {
+    versions.push(preferred)
+  }
+  for (const version of await resolveVersionCandidates()) {
+    if (version !== preferred) {
+      versions.push(version)
+    }
+  }
+
   let lastError: unknown = null
 
   for (const version of versions) {
@@ -578,7 +709,9 @@ const ensureInitialized = async (): Promise<FFPaths> => {
     initPromise = resolvePathsAsync()
   }
   const result = await initPromise
-  logger.info(`${logger.violet('[插件:@karinjs/plugin-ffmpeg]')} ${logger.green(`v${Root.version}`)} 初始化完成`)
+  logger.info(
+    `${logger.violet('[插件:@karinjs/plugin-ffmpeg]')} ${logger.green(`v${Root.version}`)} 初始化完成`,
+  )
   return result
 }
 
@@ -622,7 +755,12 @@ export const checkVersionExists = async (version: string): Promise<boolean> => {
   const ffmpegPath = await normalizeBinaryPath(versionDir, 'ffmpeg', extension)
   const ffprobePath = await normalizeBinaryPath(versionDir, 'ffprobe', extension)
 
-  return !!(ffmpegPath && ffprobePath && await fileExists(ffmpegPath) && await fileExists(ffprobePath))
+  return !!(
+    ffmpegPath &&
+    ffprobePath &&
+    (await fileExists(ffmpegPath)) &&
+    (await fileExists(ffprobePath))
+  )
 }
 
 /**
@@ -654,7 +792,11 @@ export const cleanupOtherVersions = async (keepVersion: string): Promise<void> =
   const keepDirName = `ffmpeg-${platformKey}-${keepVersion}`
 
   for (const entry of entries) {
-    if (entry.isDirectory() && entry.name.startsWith(`ffmpeg-${platformKey}-`) && entry.name !== keepDirName) {
+    if (
+      entry.isDirectory() &&
+      entry.name.startsWith(`ffmpeg-${platformKey}-`) &&
+      entry.name !== keepDirName
+    ) {
       const dirPath = path.join(cacheRoot, entry.name)
       try {
         await fs.promises.rm(dirPath, { recursive: true, force: true })
@@ -677,33 +819,33 @@ export const ffmpegTools = {
    * FFmpeg 路径
    * @returns 路径
    */
-  get ffmpegPath (): string | null {
+  get ffmpegPath(): string | null {
     return cachedPaths.ffmpegPath
   },
   /**
    * FFprobe 路径
    * @returns 路径
    */
-  get ffprobePath (): string | null {
+  get ffprobePath(): string | null {
     return cachedPaths.ffprobePath
   },
   /**
    * FFplay 路径
    * @returns 路径
    */
-  get ffplayPath (): string | null {
+  get ffplayPath(): string | null {
     return cachedPaths.ffplayPath
   },
   /**
    * 等待初始化完成
    * @returns 二进制路径
    */
-  async ready (): Promise<FFPaths> {
+  async ready(): Promise<FFPaths> {
     return initializeAsync()
   },
-  readySync (): FFPaths {
+  readySync(): FFPaths {
     return initializeSync()
-  }
+  },
 }
 
 /**
@@ -714,31 +856,31 @@ export default {
    * FFmpeg 路径
    * @returns 路径
    */
-  get ffmpegPath (): string | null {
+  get ffmpegPath(): string | null {
     return cachedPaths.ffmpegPath
   },
   /**
    * FFprobe 路径
    * @returns 路径
    */
-  get ffprobePath (): string | null {
+  get ffprobePath(): string | null {
     return cachedPaths.ffprobePath
   },
   /**
    * FFplay 路径
    * @returns 路径
    */
-  get ffplayPath (): string | null {
+  get ffplayPath(): string | null {
     return cachedPaths.ffplayPath
   },
   /**
    * 等待初始化完成
    * @returns 二进制路径
    */
-  async ready (): Promise<FFPaths> {
+  async ready(): Promise<FFPaths> {
     return initializeAsync()
   },
-  readySync (): FFPaths {
+  readySync(): FFPaths {
     return initializeSync()
-  }
+  },
 }

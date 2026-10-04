@@ -5,9 +5,9 @@ on:
     inputs:
       # 手动运行模式选择
       run_mode:
-        description: "运行模式"
+        description: '运行模式'
         required: true
-        default: "preview"
+        default: 'preview'
         type: choice
         options:
           - preview
@@ -15,19 +15,19 @@ on:
 
       # 手动发布版本号（仅生产模式需要）
       manual_version:
-        description: "手动指定版本号 (如: 1.2.3，仅生产模式有效)"
+        description: '手动指定版本号 (如: 1.2.3，仅生产模式有效)'
         required: false
         type: string
 
       # 发布说明
       release_notes:
-        description: "发布说明 (可选)"
+        description: '发布说明 (可选)'
         required: false
         type: string
 
       # 是否强制发布到 NPM
       force_npm_publish:
-        description: "强制发布到 NPM (仅生产模式)"
+        description: '强制发布到 NPM (仅生产模式)'
         required: false
         default: false
         type: boolean
@@ -157,8 +157,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: 📦 安装依赖
         run: pnpm install
@@ -330,8 +330,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: 📥 下载构建产物
         uses: actions/download-artifact@v4
